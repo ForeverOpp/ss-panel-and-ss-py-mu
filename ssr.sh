@@ -13,7 +13,7 @@ root hard nofile 65535" >> /etc/security/limits.conf
 Add_swap_partition(){
 	Memory_size=`cat /proc/meminfo | grep MemTotal | grep -E -o "[1-9][0-9]{4,}"`
 	Swap_size=`expr ${Memory_size} \* 2`
-	
+
 	dd if=/dev/zero of=/var/swap bs=1024 count=${Swap_size}
 	mkswap /var/swap;swapon /var/swap;free -m
 	echo '/var/swap swap swap default 0 0' >> /etc/fstab
@@ -47,7 +47,7 @@ Install_fail2ban(){
 		fail2ban-client status ssh-iptables;echo -e "\033[31m[↑]当前被封禁的IP列表\033[0m"
 		sed -n '12,14p' /etc/fail2ban/jail.local;echo -e "\033[31m[↑]当前fail2ban配置\033[0m"
 	fi
-	
+
 	echo;read -p "输入[n]则退出;输入一个ipv4地址则将为其解除fail2ban封锁:" N_OR_IP
 	case "${N_OR_IP}" in
 	n)
@@ -63,7 +63,7 @@ Install_Safe_Dog(){
 
 Install_Serverspeeder(){
 	read -p "请选择选项 [1]安装 [2]卸载 :" Install_Serverspeeder_Options
-	
+
 	case "${Install_Serverspeeder_Options}" in
 		1)
 		wget -N --no-check-certificate "https://github.com/91yun/serverspeeder/raw/master/serverspeeder.sh"
@@ -80,7 +80,7 @@ Uninstall_ali_cloud_shield(){
 	echo "请根据阿里云系统镜像安装环境,选项相应选项!"
 	echo "选项: [1]系统自控制台重装 [2]系统自快照/镜像恢复 [3]更换内核并安装LotServer"
 	read -p "请选择选项:" Uninstall_ali_cloud_shield_options
-	
+
 	case "${Uninstall_ali_cloud_shield_options}" in
 		1)
 		bash /root/tools/alibabacloud/New_installation.sh;;
@@ -132,7 +132,7 @@ Run_Speedtest_And_Bench_sh(){
 Install_ss_node(){
 	#Setup_time=`date +"%Y-%m-%d %H:%M:%S"`;Install_the_start_time_stamp=`date +%s`
 	system_os=`bash /root/tools/check_os.sh`
-	
+
 	case "${system_os}" in
 		centos)
 		bash /root/node/centos.sh;;
@@ -141,11 +141,11 @@ Install_ss_node(){
 		*)
 		echo "系统不受支持!请更换Centos/Debian镜像后重试!";exit 0;;
 	esac
-	
+
 	Unfile_number_limit
 	Add_swap_partition
 	Install_fail2ban
-	
+
 	#Installation_end_time=`date +"%Y-%m-%d %H:%M:%S"`;Install_end_time_stamp=`date +%s`
 	#The_installation_time=`expr ${Install_end_time_stamp} - ${Install_the_start_time_stamp}`
 	#clear;echo "安装开始时间:[${Setup_time}],安装结束时间:[${Installation_end_time}],耗时[${The_installation_time}]s."
@@ -156,19 +156,110 @@ Edit_ss_node_info(){
 	echo "旧设置如下:"
 	sed -n '2p' /root/shadowsocks/userapiconfig.py
 	sed -n '17,18p' /root/shadowsocks/userapiconfig.py
-	
-	echo;read -p "(1/3)请设置新的前端地址:" Front_end_address
-	read -p "(2/3)请设置新的节点ID:" Node_ID
-	read -p "(3/3)请设置新的Mukey:" Mukey
-	
-	if [[ ${Mukey} = '' ]];then
-		Mukey='mupass';echo "emm,我们已将Mukey设置为:mupass"
-	fi
-	
+	sed -n '24,25,26,27,28p' /root/shadowsocks/userapiconfig.py
+	API_INTERFACE=`sed -n '15p' /root/shadowsocks/userapiconfig.py`
+
+	case $API_INTERFACE in
+		"glzjinmod" )
+		echo "如需数据库SSL请手动设置！"
+		echo "不输入将被覆盖为默认设置！！！"
+		read -p "(1/7)新的前端地址: " Front_end_address
+			if [[ ${Front_end_address} = '' ]];then
+				Front_end_address=`curl -s "https://myip.ipip.net" | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"`
+				echo "已将前端地址设置为: http://${Front_end_address}"
+			fi
+		read -p "(2/7)新的节点ID: " Node_ID
+		read -p "(3/7)新的数据库地址: " MYSQL_HOST
+		read -p "(4/7)新的数据库端口: " MYSQL_PORT
+		read -p "(5/7)新的数据库用户: " MYSQL_USER
+		read -p "(6/7)新的数据库密码: " MYSQL_PASS
+		read -p "(7/7)新的数据库名: " MYSQL_DB
+
+		if [[ ${Node_ID} = '' ]]; then
+			Node_ID=2
+		fi
+		if [[ ${MYSQL_HOST} = '' ]]; then
+			MYSQL_HOST="127.0.0.1"
+		fi
+		if [[ ${MYSQL_PORT} = '' ]]; then
+			MYSQL_PORT=3306
+		fi
+		if [[ ${MYSQL_USER} = '' ]]; then
+			MYSQL_USER="root"
+		fi
+		if [[ ${MYSQL_PASS} = '' ]]; then
+			MYSQL_PASS="root"
+		fi
+		if [[ ${MYSQL_DB} = '' ]]; then
+			MYSQL_DB="sspanel"
+		fi
+
+		echo "好了，以下是您的新配置: "
+		echo "
+		#################################
+			前端地址: ${Front_end_address}
+			节点ID: ${Node_ID}
+			数据库地址: ${MYSQL_HOST}
+			数据库端口: ${MYSQL_PORT}
+			数据库用户: ${MYSQL_USER}
+			数据库密码: ${MYSQL_PASS}
+			数据库名: ${MYSQL_DB}
+		#################################
+		"
+		read -p "请确认[Y/N](默认为Y): " isPara
+		case $isPara in
+			N|n )
+				echo "请重新配置。"
+				Edit_ss_node_info
+				;;
+			* )
+				echo "参数确认。"
+				;;
+		esac
+			;;
+		"modwebapi" )
+		echo;read -p "(1/3)请设置新的前端地址:" Front_end_address
+		read -p "(2/3)请设置新的节点ID:" Node_ID
+		read -p "(3/3)请设置新的Mukey:" Mukey
+
+		if [[ ${Mukey} = '' ]];then
+			Mukey='mupass';echo "已将Mukey设置为:mupass"
+		fi
+		if [[ ${Node_ID} = '' ]]; then
+			Node_ID=2
+		fi
+		echo "好了，以下是您的新配置: "
+		echo "
+		#################################
+			前端地址: ${Front_end_address}
+			节点ID: ${Node_ID}
+			Mukey: ${Mukey}
+		#################################
+		"
+		read -p "请确认[Y/N](默认为Y): " isPara
+		case $isPara in
+			N|n )
+				echo "请重新配置。"
+				Setting_node_information $interface_kind
+				;;
+			* )
+				echo "参数确认。"
+				;;
+		esac
+			;;
+	esac
+
+
 	sed -i "17c WEBAPI_URL = \'${Front_end_address}\'" /root/shadowsocks/userapiconfig.py
 	sed -i "2c NODE_ID = ${Node_ID}" /root/shadowsocks/userapiconfig.py
 	sed -i "18c WEBAPI_TOKEN = \'${Mukey}\'" /root/shadowsocks/userapiconfig.py
-	
+	sed -i "15c API_INTERFACE = \'${API_INTERFACE}\'" /root/shadowsocks/userapiconfig.py
+	sed -i "24c MYSQL_HOST = \'${MYSQL_HOST}\'" /root/shadowsocks/userapiconfig.py
+	sed -i "25c MYSQL_PORT = ${MYSQL_PORT}" /root/shadowsocks/userapiconfig.py
+	sed -i "26c MYSQL_USER = \'${MYSQL_USER}\'" /root/shadowsocks/userapiconfig.py
+	sed -i "27c MYSQL_PASS = \'${MYSQL_PASS}\'" /root/shadowsocks/userapiconfig.py
+	sed -i "28c MYSQL_DB = \'${MYSQL_DB}\'" /root/shadowsocks/userapiconfig.py
+
 	bash /root/shadowsocks/stop.sh
 	bash /root/shadowsocks/run.sh
 	echo "新设置已生效."
@@ -203,7 +294,7 @@ Install_Aria2(){
 		wget -N --no-check-certificate "https://softs.fun/Bash/aria2.sh"
 		chmod +x aria2.sh
 	fi
-	
+
 	bash aria2.sh
 }
 
@@ -212,7 +303,7 @@ Install_Server_Status(){
 		wget "https://softs.fun/Bash/status.sh"
 		chmod 777 status.sh
 	fi
-	
+
 	read -p "为服务端/客户端?[s/c]:" server_or_client
 	case "${server_or_client}" in
 		s)
@@ -287,7 +378,7 @@ echo "####################################################################
 # [5] [Install] # [BBR]                                            #
 ####################################################################
 # [a]检查BBR状态 [b]安装/执行路由追踪 [c]Speedtest/UnixBench/bench #
-# [d]更换镜像源 [e]安装/检查 Fail2ban [f]安装/执行 安全狗          #   
+# [d]更换镜像源 [e]安装/检查 Fail2ban [f]安装/执行 安全狗          #
 # [g]卸载阿里云云盾 [h]安装/卸载 锐速 [i]Nginx 管理脚本            #
 # [j]安装纯净系统 [k]安装Aria2 [l]安装Server Status [m]安装Socks5  #
 ####################################################################
