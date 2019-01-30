@@ -8,7 +8,7 @@ Select_interface_kind() {
 # ## By the way, what the hell is the name of these functions? ##
 # -------------------------------------------------------------------------- #
 	clear
-	read -p "请指定接口对接方式\[1、MySQL, 2、网页\]（默认网页对接）: " interface_kind
+	read -p "请指定接口对接方式[1、MySQL, 2、网页]（默认网页对接）: " interface_kind
 	Setting_node_information $interface_kind
 }
 
@@ -142,7 +142,7 @@ install_node_for_centos(){
 
 	wget -O /usr/bin/shadowsocks "https://raw.githubusercontent.com/qinghuas/ss-panel-and-ss-py-mu/master/node/ss";chmod 777 /usr/bin/shadowsocks
 	yum -y install lsof lrzsz python-devel libffi-devel openssl-devel
-	git clone -b manyuser https://github.com/glzjin/shadowsocks.git "/root/shadowsocks"
+	git clone -b manyuser https://github.com/ForeverOpp/shadowsocksr.git "/root/shadowsocks"
 	cd /root/shadowsocks;cp apiconfig.py userapiconfig.py;cp config.json user-config.json
 
 	sed -i "17c WEBAPI_URL = \'${Front_end_address}\'" /root/shadowsocks/userapiconfig.py
